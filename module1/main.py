@@ -18,11 +18,9 @@ CYCLES = {
 }
 CELL, COLS, ROWS = 36, 21, 21
 
-
 def px(path, rot=0):
     p = QPixmap(path)
     return p.transformed(QTransform().rotate(rot)) if rot and not p.isNull() else p
-
 
 class Grid(QWidget):
     def __init__(self, side):
@@ -77,7 +75,6 @@ class Grid(QWidget):
         self.roads = parse(data.get("roads", {}))
         self.objs = parse(data.get("objs", {}))
         self.update()
-
 
 class Side(QWidget):
     def __init__(self):
@@ -159,7 +156,7 @@ class Side(QWidget):
         if base == IMG2:
             lbl = QLabel(f"Скорость: {obj.get('speed', 0)} сек")
             self.pvb.addWidget(lbl)
-            for txt in ("+5", "-5"):
+            for txt in ("+1", "-1"):
                 b = QPushButton(txt)
                 b.clicked.connect(lambda: None)
                 self.pvb.addWidget(b)
@@ -172,7 +169,6 @@ class Side(QWidget):
             self.props.hide()
         b.clicked.connect(dele)
         self.pvb.addWidget(b)
-
 
 class App(QMainWindow):
     def __init__(self):
@@ -218,7 +214,6 @@ class App(QMainWindow):
         fn, _ = QFileDialog.getOpenFileName(self, "", "", "JSON (*.json)")
         if fn:
             self.grid.load(fn)
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
