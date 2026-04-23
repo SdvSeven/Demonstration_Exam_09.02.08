@@ -3,20 +3,20 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter, QColor, QPen, QIcon, QPixmap, QTransform
 from PyQt6.QtCore import Qt, QSize
 
-M = r"module1\media"
-LOGO = f"{M}\\TLgreen.png"
+M = r"module1\media"       # -> Ваш путь к папке /media
+LOGO = f"{M}\\TLgreen.png" # Иконка -> Светофор
 IMG1, IMG2, IMG3, IMG4, IMG5 = f"{M}\\Cbottom.png", f"{M}\\Pedestrain.png", f"{M}\\Block.png", f"{M}\\Zhorizontal.png", f"{M}\\TLyellow.png"
 RD1, RD2 = f"{M}\\Rvertical.png", f"{M}\\Rcrossroads.png"
-PLACE_IMGS = [IMG1, IMG2, IMG3, IMG4, IMG5]
-ROAD_IMGS  = [RD1, RD2]
-FREE   = {IMG2, IMG3}
-ROT    = {IMG1, IMG2, IMG4, IMG5, RD1, RD2}
-CYCLES = {
+PLACE_IMGS = [IMG1, IMG2, IMG3, IMG4, IMG5] # Изображения для "Добавить объекты"
+ROAD_IMGS  = [RD1, RD2]                     # Изображение для "Редактор дорог"
+FREE   = {IMG2, IMG3}                       # Объекты которые можно ставить без дороги
+ROT    = {IMG1, IMG2, IMG4, IMG5, RD1, RD2} # Объекты, которые можно поворачивать
+CYCLES = {                                  # Циклы изменения типов объекта (цвет, тип)
     IMG1: [IMG1, f"{M}\\BCvertical.png", f"{M}\\GCicon.ico"],
     IMG3: [IMG3, f"{M}\\Stop.png",       f"{M}\\Start.png"],
     IMG5: [IMG5, f"{M}\\TLred.png",      f"{M}\\TLgreen.png"],
 }
-CELL, COLS, ROWS = 36, 21, 21
+CELL, COLS, ROWS = 36, 21, 21 # CELL - размер одной клетки в пикселях, COLS - количество столбцов, ROWS - количество строк
 
 def get_px(path, rot=0):
     p = QPixmap(path)
