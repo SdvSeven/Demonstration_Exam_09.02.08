@@ -5,8 +5,8 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter, QColor, QPen, QIcon, QPixmap, QTransform
 from PyQt6.QtCore import Qt, QSize
 
-M        = r"module1\media"      # ← путь к медиа укажи здесь
-MAP_FILE = r"road.json"          # ← путь к карте укажи здесь
+M        = r" "      # ← путь к медиа укажи здесь
+MAP_FILE = r" "          # ← путь к карте укажи здесь
 
 LOGO = f"{M}\\TLgreen.png"
 IMG1, IMG2, IMG3, IMG4, IMG5 = f"{M}\\Cbottom.png", f"{M}\\Pedestrain.png", f"{M}\\Block.png", f"{M}\\Zhorizontal.png", f"{M}\\TLyellow.png"
