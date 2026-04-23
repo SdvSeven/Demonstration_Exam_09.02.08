@@ -16,8 +16,10 @@
 
 ## Файлы и структура репозитория
 
-- Образец задания №1 - [[Образец задания для ГИА ДЭ БУ](https://github.com/SdvSeven/09.02.08-1-2026/blob/main/Образец%20задания%20для%20ГИА%20ДЭ%20БУ%2009.docx)]
-- Модуль 1 - [[Код + Презентация + инструкция + media](https://github.com/SdvSeven/09.02.08-1-2026/tree/main/module1)]
+- Образец задания №1 - [Образец задания для ГИА ДЭ БУ](https://github.com/SdvSeven/09.02.08-1-2026/blob/main/Образец%20задания%20для%20ГИА%20ДЭ%20БУ%2009.docx)
+- Модуль 1 - [Код + Презентация + инструкция + media](https://github.com/SdvSeven/09.02.08-1-2026/tree/main/module1)
+- Модуль 2 - [Тестовая версия кода + media](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/tree/main/module2)
+- Методическе указание Модуль 1 - [Указания](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/blob/main/Методичка_Модуль1_PyQt6.docx)
 
 ---
 
