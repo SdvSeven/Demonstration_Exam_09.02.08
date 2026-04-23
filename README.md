@@ -32,7 +32,7 @@ sys, os, serial, json, random, time, sqlite3, PIL, PySide6, datetime, PyQt5.QtWi
 ## Версия
 
 ```bash
-Python 3.11+
+Python 3.9+
 ```
 
 ---
