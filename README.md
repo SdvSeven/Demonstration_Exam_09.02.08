@@ -14,7 +14,7 @@
 
 ---
 
-## Файлы и структура репозитория
+## Ключевые файлы репозитория
 
 - Образец задания ДЭ - [Перейти к файлу](https://github.com/SdvSeven/09.02.08-1-2026/blob/main/Образец%20задания%20для%20ГИА%20ДЭ%20БУ%2009.docx)
 - Модуль 1 (Решение) - [Перейти к файлу](https://github.com/SdvSeven/09.02.08-1-2026/tree/main/module1)
@@ -24,13 +24,19 @@
 
 ---
 
-# Модуль 1
+# Информация по модулям программы
 
 <p align="center">
   <img src="media/screen_module1.png", alt="Company Image" width="500"/>
 </p>
 <p align="center">
-  <b>Интерфейс программы</b>
+  <b>Интерфейс программы 'Модуль 1'</b>
+</p>
+<p align="center">
+  <img src="media/screen_module2.png", alt="Company Image" width="500"/>
+</p>
+<p align="center">
+  <b>Интерфейс программы 'Модуль 2' - В РАЗРАБОТКЕ</b>
 </p>
 
 ## Требования
