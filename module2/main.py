@@ -26,10 +26,44 @@ TL_MAP={"Диагностика":"Сброс","Восстановление":"В
         "Режим по транспорту":"По транспорту","Тест шаблон":"Тест шаблон","Тест рандом":"Тест рандом"}
 ROUTES:dict={}  # маршруты Старт/Стоп цикла
 
-def init_db():
+# глобальные счётчики
+TICK=0                        # тик с момента старта теста
+TL_STATS={}                   # {tl_id: {"count":0,"switches":0,"start_tick":0}}
+CAR_STATS={}                  # {car_id: {"spawn":tick}}
+
+def init_db(reset=False):
     con=sqlite3.connect(DB_FILE)
     con.execute("CREATE TABLE IF NOT EXISTS Traffic_light (Id_light,Car_count_full_run,Car_average_in_minute,Count_color_switches)")
     con.execute("CREATE TABLE IF NOT EXISTS Cars_stats (Car_id,Car_spawn_ticks,Car_exit_ticks)")
+    if reset:
+        con.execute("DELETE FROM Traffic_light")
+        con.execute("DELETE FROM Cars_stats")
+    con.commit(); con.close()
+
+def db_car_spawn(car_id):
+    CAR_STATS[car_id]={"spawn":TICK}
+
+def db_car_exit(car_id):
+    if car_id not in CAR_STATS: return
+    con=sqlite3.connect(DB_FILE)
+    con.execute("INSERT INTO Cars_stats VALUES (?,?,?)",(car_id,CAR_STATS.pop(car_id)["spawn"],TICK))
+    con.commit(); con.close()
+
+def db_car_passed_tl(tl_id):
+    TL_STATS.setdefault(tl_id,{"count":0,"switches":0,"start_tick":TICK})
+    TL_STATS[tl_id]["count"]+=1
+
+def db_tl_switch(tl_id):
+    TL_STATS.setdefault(tl_id,{"count":0,"switches":0,"start_tick":TICK})
+    TL_STATS[tl_id]["switches"]+=1
+
+def db_flush_tl():
+    if not TL_STATS: return
+    con=sqlite3.connect(DB_FILE); rows=[]
+    for tid,s in TL_STATS.items():
+        elapsed_min=max((TICK-s["start_tick"])*0.4/60,0.001)
+        rows.append((tid,s["count"],round(s["count"]/elapsed_min,2),s["switches"]))
+    con.executemany("INSERT OR REPLACE INTO Traffic_light VALUES (?,?,?,?)",rows)
     con.commit(); con.close()
 
 get_px=lambda path,rot=0:(lambda p:p.transformed(QTransform().rotate(rot)) if rot and not p.isNull() else p)(QPixmap(path))
@@ -41,6 +75,7 @@ def tl_near(objs,c,skip=None):
                for dx,dy in((1,0),(-1,0),(0,1),(0,-1)) if (c[0]+dx,c[1]+dy)!=skip)
 
 def step(cars,objs,anim,routes):
+    global TICK; TICK+=1
     pos=set(cars); done=True
     for k,st in anim.items():
         rt=routes[k]
@@ -51,6 +86,11 @@ def step(cars,objs,anim,routes):
         if car:
             d=(nxt[0]-cur[0],nxt[1]-cur[1]); car["path"]=DIR_IMG.get(d,car["path"]); car["dir"]=d
             cars[nxt]=car; pos.discard(cur); pos.add(nxt)
+            # проехал через светофор?
+            tl=objs.get(nxt,{}); 
+            if tl.get("base")==IMG5: db_car_passed_tl(f"{nxt[0]},{nxt[1]}")
+            # выехал за пределы?
+            if nxt[0] in(0,COLS-1) or nxt[1] in(0,ROWS-1): db_car_exit(id(car))
         st["pos"]=list(nxt); st["i"]+=1
     return done
 
@@ -148,11 +188,14 @@ class Grid(QWidget):
 
     # ── Старт/Стоп цикла ────────────────────────────────────────────────
     def start_cycle(self):
+        global TICK,TL_STATS,CAR_STATS; TICK=0; TL_STATS={}; CAR_STATS={}
+        init_db(reset=True)
         self._anim={k:{"pos":list(k),"i":1} for k,r in ROUTES.items() if k in self.cars and len(r)>1}
+        for car in self.cars.values(): db_car_spawn(id(car))
         if self._anim: self._T["cycle"].start()
 
     def stop_cycle(self):
-        self._T["cycle"].stop(); self._anim={}; self.update()
+        self._T["cycle"].stop(); db_flush_tl(); self._anim={}; self.update()
 
     # ── Тест шаблон ─────────────────────────────────────────────────────
     def start_tmpl(self):
@@ -167,7 +210,7 @@ class Grid(QWidget):
         self._tmpl_spawn(); self._T["tspwn"].start(); self._T["tmpl"].start()
 
     def stop_tmpl(self):
-        self._T["tspwn"].stop(); self._T["tmpl"].stop()
+        self._T["tspwn"].stop(); self._T["tmpl"].stop(); db_flush_tl()
         for st in self._tanim.values(): self.cars.pop(tuple(st["pos"]),None)
         self._tanim={}; self.update()
 
@@ -175,7 +218,7 @@ class Grid(QWidget):
         if not self._tqueue: self._T["tspwn"].stop(); return
         k=self._tqueue.pop(0)
         if k in self._troutes:
-            self.cars[k]=self._tcar[k]          # ставим машину только сейчас
+            self.cars[k]=self._tcar[k]; db_car_spawn(id(self._tcar[k]))
             self._tanim[k]={"pos":list(k),"i":1}
         self.update()
 
@@ -365,15 +408,15 @@ class App(QMainWindow):
         ]:
             b=QPushButton(name); b.setFixedHeight(32); b.setCheckable(chk)
             b.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
-            b.clicked.connect(lambda _,n=name,a=on,z=off:(a() if self._mb[n].isChecked() else z(),self.side.set_mode(n if self._mb[n].isChecked() else "")))
+            b.clicked.connect(lambda _,n=name,a=on,z=off,c=chk:(a() if (not c or self._mb[n].isChecked()) else z(),self.side.set_mode(n if (not c or self._mb[n].isChecked()) else "")))
             bar2.addWidget(b); self._mb[name]=b
         root.addLayout(bar2); self.adjustSize(); self.grid.load(MAP_FILE)
 
     def _tl_tick(self):
         state=TL_CYCLE[self._tl_idx%3]
-        for o in self.grid.objs.values():
-            if o["base"]==IMG5: o["path"]=state
+        for c,o in self.grid.objs.items():
+            if o["base"]==IMG5: o["path"]=state; db_tl_switch(f"{c[0]},{c[1]}")
         self._tl_idx+=1; self.grid.update()
 
 if __name__=="__main__":
-    init_db(); app=QApplication(sys.argv); App().show(); sys.exit(app.exec())
+    init_db(reset=False); app=QApplication(sys.argv); App().show(); sys.exit(app.exec())
