@@ -35,7 +35,7 @@
   <img src="media/screen_module2.png", alt="Company Image" width="500"/>
 </p>
 <p align="center">
-  <b>Интерфейс программы 'Модуль 2' - В РАЗРАБОТКЕ</b>
+  <b>Интерфейс программы 'Модуль 2'</b>
 </p>
 
 ---
