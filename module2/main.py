@@ -1,4 +1,4 @@
-# КОД НА ЭТАПЕ РАЗРАБОТКЕ, работают все ржимы, кроме тех, котоыре затрагивают программную часть
+# КОД НА ЭТАПЕ РАЗРАБОТКЕ, работает все, дорабатываеться приязка к аппаратноц части.
 import sys,json,os,sqlite3,random
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter,QColor,QPen,QIcon,QPixmap,QTransform
