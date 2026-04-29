@@ -32,7 +32,7 @@
   <b>Интерфейс программы 'Модуль 1'</b>
 </p>
 <p align="center">
-  <img src="media/screen_module2.png", alt="Company Image" width="500"/>
+  <img src="media/screen_module_2.png", alt="Company Image" width="500"/>
 </p>
 <p align="center">
   <b>Интерфейс программы 'Модуль 2'</b>
