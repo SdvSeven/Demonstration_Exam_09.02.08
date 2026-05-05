@@ -1,3 +1,4 @@
+# ЗАДАНИЕ РЕАЛИЗОВАНО ПО ТЕХНИЧЕСКОМУ ЗАДАНИЮ ИРПО
 # Intelligent Integrated Systems Technician (09.02.08-1-2026)
 
 <p align="center">
