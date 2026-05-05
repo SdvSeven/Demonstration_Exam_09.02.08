@@ -20,6 +20,7 @@
 - Модуль 1 (Решение) - [Перейти к файлу](https://github.com/SdvSeven/09.02.08-1-2026/tree/main/module1)
 - Модуль 2 (Решение) - [Перейти к файлу](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/tree/main/module2)
 - Методическе пособие "Модуль 1" - [Перейти к файлу](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/blob/main/Методическое_пособие_Модуль1.docx)
+- Методические пособие "Модуль 1, 2" - [Перейти к файлу](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/blob/main/Методическое_пособие_Модули_1_2.docx)
 - Критерии оценки модулей - [Перейти к файлу](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/blob/main/Схема%20Оценки.xlsx)
 
 ---
