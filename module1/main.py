@@ -7,8 +7,8 @@ M = r"module1\media"       # -> Ваш путь к папке /media
 LOGO = f"{M}\\TLgreen.png" # Иконка -> Светофор
 IMG1, IMG2, IMG3, IMG4, IMG5 = f"{M}\\Cbottom.png", f"{M}\\Pedestrain.png", f"{M}\\Block.png", f"{M}\\Zhorizontal.png", f"{M}\\TLyellow.png"
 RD1, RD2 = f"{M}\\Rvertical.png", f"{M}\\Rcrossroads.png"
-PLACE_IMGS = [IMG1, IMG2, IMG3, IMG4, IMG5] # Изображения для "Добавить объекты"
-ROAD_IMGS  = [RD1, RD2]                     # Изображение для "Редактор дорог"
+PLACE_IMGS = [IMG1, IMG2, IMG3, IMG4, IMG5, RD1, RD2] # Изображения для "Добавить объекты"
+PLACE_NAMES = ["Автомобиль", "Пешеход", "Блок", "Знак", "Светофор", "Дорога верт.", "Перекрёсток"]
 FREE   = {IMG2, IMG3}                       # Объекты которые можно ставить без дороги
 ROT    = {IMG1, IMG2, IMG4, IMG5, RD1, RD2} # Объекты, которые можно поворачивать
 CYCLES = {                                  # Циклы изменения типов объекта (цвет, тип)
@@ -48,11 +48,9 @@ class Grid(QWidget):
         x, y = int(e.position().x()//CELL), int(e.position().y()//CELL)
         if not (0 <= x < COLS and 0 <= y < ROWS): return
         c = (x, y)
-        if self.mode == 'road' and self.sel:
-            self.roads[c] = {"path": self.sel, "base": self.sel, "rot": 0}
-        elif self.mode == 'place' and self.sel:
-            if c in self.roads or self.sel in FREE:
-                self.objs[c] = {"path": self.sel, "base": self.sel, "rot": 0, "speed": 0}
+        if self.mode == 'place' and self.sel:
+            if self.sel in (RD1, RD2): self.roads[c] = {"path": self.sel, "base": self.sel, "rot": 0}
+            elif c in self.roads or self.sel in FREE: self.objs[c] = {"path": self.sel, "base": self.sel, "rot": 0, "speed": 0}
         else:
             o = self.objs.get(c) or self.roads.get(c)
             if o: self.side.show_props(c, o, self)
@@ -73,22 +71,19 @@ class Grid(QWidget):
 class Side(QWidget):
     def __init__(self):
         super().__init__()
-        self.setFixedWidth(120); self.grid = None; self.ibtns = []
-        vb = QVBoxLayout(self); vb.setContentsMargins(6,6,6,6); vb.setSpacing(4)
-        self.sp = self._sec(PLACE_IMGS); self.sr = self._sec(ROAD_IMGS)
-        self.props = QWidget(); self.pvb = QVBoxLayout(self.props)
+        self.grid = None; self.ibtns = []
+        hb = QHBoxLayout(self); hb.setContentsMargins(6,2,6,2); hb.setSpacing(4)
+        self.sp = self._sec(PLACE_IMGS, PLACE_NAMES)
+        self.props = QWidget(); self.pvb = QHBoxLayout(self.props)
         self.pvb.setContentsMargins(0,0,0,0); self.pvb.setSpacing(4)
-        for w in (self.sp, self.sr, self.props): w.hide(); vb.addWidget(w)
-        vb.addStretch()
+        for w in (self.sp, self.props): w.hide(); hb.addWidget(w)
+        hb.addStretch()
 
-    def _sec(self, paths):
-        w = QWidget(); vb = QVBoxLayout(w); vb.setContentsMargins(0,0,0,0)
-        for p in paths:
-            b = QPushButton(); b.setFixedSize(100,100); b.setCheckable(True); b.setProperty("path", p)
-            ic = get_px(p)
-            if not ic.isNull(): b.setIcon(QIcon(ic)); b.setIconSize(QSize(88,88))
-            else: b.setText(os.path.basename(p)[:8])
-            b.clicked.connect(self._pick); vb.addWidget(b); self.ibtns.append(b)
+    def _sec(self, paths, names):
+        w = QWidget(); hb = QHBoxLayout(w); hb.setContentsMargins(0,0,0,0); hb.setSpacing(4)
+        for p, name in zip(paths, names):
+            b = QPushButton(name); b.setFixedHeight(30); b.setCheckable(True); b.setProperty("path", p)
+            b.clicked.connect(self._pick); hb.addWidget(b); self.ibtns.append(b)
         return w
 
     def _pick(self):
@@ -97,10 +92,10 @@ class Side(QWidget):
             if b is not s: b.setChecked(False)
         if self.grid: self.grid.sel = s.property("path") if s.isChecked() else None
 
-    def switch(self, place=False, road=False):
+    def switch(self, place=False):
         for b in self.ibtns: b.setChecked(False)
-        if self.grid: self.grid.sel = None; self.grid.mode = 'place' if place else ('road' if road else None)
-        self.props.hide(); self.sp.setVisible(place); self.sr.setVisible(road)
+        if self.grid: self.grid.sel = None; self.grid.mode = 'place' if place else None
+        self.props.hide(); self.sp.setVisible(place)
 
     def show_props(self, cell, obj, grid):
         while self.pvb.count():
@@ -118,14 +113,8 @@ class Side(QWidget):
                 i = cy.index(o["path"]) if o["path"] in cy else 0
                 o["path"] = cy[(i+1)%len(cy)]; grid.update()
             b.clicked.connect(color); self.pvb.addWidget(b)
-        if base == IMG2:
-            lbl = QLabel(f"Скорость: {obj.get('speed',0)} сек"); self.pvb.addWidget(lbl)
-            for txt, d in (("+1",1),("-1",-1)):
-                b = QPushButton(txt)
-                def spd(_, o=obj, dv=d, l=lbl): o["speed"]=o.get("speed",0)+dv; l.setText(f"Скорость: {o['speed']} сек")
-                b.clicked.connect(spd); self.pvb.addWidget(b)
         b = QPushButton("Удалить"); b.setStyleSheet("color:red;")
-        def dele(_, c=cell, g=grid): g.objs.pop(c,None); g.roads.pop(c,None); g.update(); self.props.hide()
+        def dele(_, c=cell, g=grid): g.objs.pop(c, None); g.update(); self.props.hide()
         b.clicked.connect(dele); self.pvb.addWidget(b)
 
 class App(QMainWindow):
@@ -138,20 +127,20 @@ class App(QMainWindow):
 
         c = QWidget(); self.setCentralWidget(c)
         root = QVBoxLayout(c); root.setContentsMargins(0,0,0,0); root.setSpacing(0)
-        body = QHBoxLayout(); body.setContentsMargins(0,0,0,0); body.setSpacing(0)
-        body.addWidget(self.side); body.addWidget(self.grid); root.addLayout(body)
+        root.addWidget(self.grid)
 
         bar = QHBoxLayout(); bar.setContentsMargins(6,6,6,6); bar.setSpacing(6)
         self.bp = QPushButton("Добавить объекты"); self.bp.setCheckable(True)
-        self.br = QPushButton("Редактор дороги");  self.br.setCheckable(True)
         bs = QPushButton("Сохранить"); bl = QPushButton("Загрузить")
-        self.bp.toggled.connect(lambda v: (self.br.setChecked(False), self.side.switch(place=v)))
-        self.br.toggled.connect(lambda v: (self.bp.setChecked(False), self.side.switch(road=v)))
+        self.bp.toggled.connect(lambda v: self.side.switch(place=v))
         bs.clicked.connect(lambda: (fn:=QFileDialog.getSaveFileName(self,"","","JSON (*.json)")[0]) and self.grid.save(fn))
         bl.clicked.connect(lambda: (fn:=QFileDialog.getOpenFileName(self,"","","JSON (*.json)")[0]) and self.grid.load(fn))
-        for b in (self.bp, self.br, bs, bl):
+        for b in (self.bp, bs, bl):
             b.setFixedHeight(32); b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed); bar.addWidget(b)
-        root.addLayout(bar); self.adjustSize()
+
+        bottom = QVBoxLayout(); bottom.setContentsMargins(0,0,0,0); bottom.setSpacing(0)
+        bottom.addWidget(self.side); bottom.addLayout(bar)
+        root.addLayout(bottom); self.adjustSize()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
