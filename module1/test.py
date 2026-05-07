@@ -7,10 +7,8 @@ M = r"module1\media"       # -> Ваш путь к папке /media
 LOGO = f"{M}\\TLgreen.png" # Иконка -> Светофор
 IMG1, IMG2, IMG3, IMG4, IMG5 = f"{M}\\Cbottom.png", f"{M}\\Pedestrain.png", f"{M}\\Block.png", f"{M}\\Zhorizontal.png", f"{M}\\TLyellow.png"
 RD1, RD2 = f"{M}\\Rvertical.png", f"{M}\\Rcrossroads.png"
-PLACE_IMGS = [IMG1, IMG2, IMG3, IMG4, IMG5] # Изображения для "Добавить объекты"
-PLACE_NAMES = ["Автомобиль", "Пешеход", "Блок", "Знак", "Светофор"]  # Названия кнопок
-ROAD_IMGS  = [RD1, RD2]                     # Изображение для "Редактор дорог"
-ROAD_NAMES = ["Дорога верт.", "Перекрёсток"] # Названия кнопок дорог
+PLACE_IMGS = [IMG1, IMG2, IMG3, IMG4, IMG5, RD1, RD2] # Изображения для "Добавить объекты"
+PLACE_NAMES = ["Автомобиль", "Пешеход", "Блок", "Знак", "Светофор", "Дорога верт.", "Перекрёсток"]
 FREE   = {IMG2, IMG3}                       # Объекты которые можно ставить без дороги
 ROT    = {IMG1, IMG2, IMG4, IMG5, RD1, RD2} # Объекты, которые можно поворачивать
 CYCLES = {                                  # Циклы изменения типов объекта (цвет, тип)
@@ -50,11 +48,9 @@ class Grid(QWidget):
         x, y = int(e.position().x()//CELL), int(e.position().y()//CELL)
         if not (0 <= x < COLS and 0 <= y < ROWS): return
         c = (x, y)
-        if self.mode == 'road' and self.sel:
-            self.roads[c] = {"path": self.sel, "base": self.sel, "rot": 0}
-        elif self.mode == 'place' and self.sel:
-            if c in self.roads or self.sel in FREE:
-                self.objs[c] = {"path": self.sel, "base": self.sel, "rot": 0, "speed": 0}
+        if self.mode == 'place' and self.sel:
+            if self.sel in (RD1, RD2): self.roads[c] = {"path": self.sel, "base": self.sel, "rot": 0}
+            elif c in self.roads or self.sel in FREE: self.objs[c] = {"path": self.sel, "base": self.sel, "rot": 0, "speed": 0}
         else:
             o = self.objs.get(c) or self.roads.get(c)
             if o: self.side.show_props(c, o, self)
@@ -77,10 +73,10 @@ class Side(QWidget):
         super().__init__()
         self.grid = None; self.ibtns = []
         hb = QHBoxLayout(self); hb.setContentsMargins(6,2,6,2); hb.setSpacing(4)
-        self.sp = self._sec(PLACE_IMGS, PLACE_NAMES); self.sr = self._sec(ROAD_IMGS, ROAD_NAMES)
+        self.sp = self._sec(PLACE_IMGS, PLACE_NAMES)
         self.props = QWidget(); self.pvb = QHBoxLayout(self.props)
         self.pvb.setContentsMargins(0,0,0,0); self.pvb.setSpacing(4)
-        for w in (self.sp, self.sr, self.props): w.hide(); hb.addWidget(w)
+        for w in (self.sp, self.props): w.hide(); hb.addWidget(w)
         hb.addStretch()
 
     def _sec(self, paths, names):
@@ -96,10 +92,10 @@ class Side(QWidget):
             if b is not s: b.setChecked(False)
         if self.grid: self.grid.sel = s.property("path") if s.isChecked() else None
 
-    def switch(self, place=False, road=False):
+    def switch(self, place=False):
         for b in self.ibtns: b.setChecked(False)
-        if self.grid: self.grid.sel = None; self.grid.mode = 'place' if place else ('road' if road else None)
-        self.props.hide(); self.sp.setVisible(place); self.sr.setVisible(road)
+        if self.grid: self.grid.sel = None; self.grid.mode = 'place' if place else None
+        self.props.hide(); self.sp.setVisible(place)
 
     def show_props(self, cell, obj, grid):
         while self.pvb.count():
@@ -141,13 +137,11 @@ class App(QMainWindow):
 
         bar = QHBoxLayout(); bar.setContentsMargins(6,6,6,6); bar.setSpacing(6)
         self.bp = QPushButton("Добавить объекты"); self.bp.setCheckable(True)
-        self.br = QPushButton("Редактор дороги");  self.br.setCheckable(True)
         bs = QPushButton("Сохранить"); bl = QPushButton("Загрузить")
-        self.bp.toggled.connect(lambda v: (self.br.setChecked(False), self.side.switch(place=v)))
-        self.br.toggled.connect(lambda v: (self.bp.setChecked(False), self.side.switch(road=v)))
+        self.bp.toggled.connect(lambda v: self.side.switch(place=v))
         bs.clicked.connect(lambda: (fn:=QFileDialog.getSaveFileName(self,"","","JSON (*.json)")[0]) and self.grid.save(fn))
         bl.clicked.connect(lambda: (fn:=QFileDialog.getOpenFileName(self,"","","JSON (*.json)")[0]) and self.grid.load(fn))
-        for b in (self.bp, self.br, bs, bl):
+        for b in (self.bp, bs, bl):
             b.setFixedHeight(32); b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed); bar.addWidget(b)
 
         bottom = QVBoxLayout(); bottom.setContentsMargins(0,0,0,0); bottom.setSpacing(0)
