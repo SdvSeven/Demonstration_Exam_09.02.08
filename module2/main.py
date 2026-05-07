@@ -161,7 +161,7 @@ class PropsPanel(QWidget):
             self._btn("Автоматический режим", on_auto, checkable=True)
 
         def on_del(_, c=cell, g=grid):
-            g.objs.pop(c,None); g.roads.pop(c,None); g.update(); self.hide(); self._timer.stop()  # удаление
+            g.objs.pop(c,None); g.update(); self.hide(); self._timer.stop()  # удаление только объекта
         self._btn("Удалить", on_del).setStyleSheet("color:red;")
 
     def _auto_tick(self):
