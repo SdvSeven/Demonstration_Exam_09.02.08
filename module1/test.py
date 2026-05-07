@@ -113,12 +113,6 @@ class Side(QWidget):
                 i = cy.index(o["path"]) if o["path"] in cy else 0
                 o["path"] = cy[(i+1)%len(cy)]; grid.update()
             b.clicked.connect(color); self.pvb.addWidget(b)
-        if base == IMG2:
-            lbl = QLabel(f"Скорость: {obj.get('speed',0)} сек"); self.pvb.addWidget(lbl)
-            for txt, d in (("+1",1),("-1",-1)):
-                b = QPushButton(txt)
-                def spd(_, o=obj, dv=d, l=lbl): o["speed"]=o.get("speed",0)+dv; l.setText(f"Скорость: {o['speed']} сек")
-                b.clicked.connect(spd); self.pvb.addWidget(b)
         b = QPushButton("Удалить"); b.setStyleSheet("color:red;")
         def dele(_, c=cell, g=grid): g.objs.pop(c, None); g.update(); self.props.hide()
         b.clicked.connect(dele); self.pvb.addWidget(b)
