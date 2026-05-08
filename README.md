@@ -20,7 +20,7 @@
 - Образец задания ДЭ - [Перейти к файлу](https://github.com/SdvSeven/09.02.08-1-2026/blob/main/Образец%20задания%20для%20ГИА%20ДЭ%20БУ%2009.docx)
 - Модуль 1 (Решение) - [Перейти к файлу](https://github.com/SdvSeven/09.02.08-1-2026/tree/main/module1)
 - Модуль 2 (Решение) - [Перейти к файлу](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/tree/main/module2)
-- Методические пособие "Модуль 1, 2" - [Перейти к файлу](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/blob/main/Методическое_пособие_Модули_1_2.docx)
+- Методические пособие "Модуль 1, 2" - [Перейти к файлу](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/blob/main/Методическое_пособие_09.02.08.docx)
 - Критерии оценки модулей - [Перейти к файлу](https://github.com/SdvSeven/Demonstration_Exam_09.02.08/blob/main/Схема%20Оценки.xlsx)
 
 ---
