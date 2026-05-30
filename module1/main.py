@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter, QColor, QPen, QIcon, QPixmap, QTransform
 from PyQt6.QtCore import Qt, QSize
 
-M = r"module1\media"       # -> Ваш путь к папке /media
+M = r"media"       # -> Ваш путь к папке /media
 LOGO = f"{M}\\TLgreen.png" # Иконка -> Светофор
 IMG1, IMG2, IMG3, IMG4, IMG5 = f"{M}\\Cbottom.png", f"{M}\\Pedestrain.png", f"{M}\\Block.png", f"{M}\\Zhorizontal.png", f"{M}\\TLyellow.png"
 RD1, RD2 = f"{M}\\Rvertical.png", f"{M}\\Rcrossroads.png"
@@ -114,7 +114,7 @@ class Side(QWidget):
                 o["path"] = cy[(i+1)%len(cy)]; grid.update()
             b.clicked.connect(color); self.pvb.addWidget(b)
         b = QPushButton("Удалить"); b.setStyleSheet("color:red;")
-        def dele(_, c=cell, g=grid): g.objs.pop(c, None); g.update(); self.props.hide()
+        def dele(_, c=cell, g=grid): g.objs.pop(c, None); g.roads.pop(c, None); g.update(); self.props.hide()
         b.clicked.connect(dele); self.pvb.addWidget(b)
 
 class App(QMainWindow):
@@ -144,5 +144,6 @@ class App(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    App().show()
+    window = App()
+    window.show()
     sys.exit(app.exec())
