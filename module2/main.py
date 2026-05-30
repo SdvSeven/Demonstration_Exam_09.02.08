@@ -1,11 +1,11 @@
-import sys, json, os, sqlite3, time
+import sys, json, os, sqlite3, time, threading
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter, QColor, QPen, QIcon, QPixmap, QTransform
 from PyQt6.QtCore import Qt, QTimer
 try: import serial; HAS_SERIAL = True
 except: HAS_SERIAL = False
 
-M        = r"module1\media"
+M        = r"media"
 MAP_FILE = r"module1\map.json"
 DB_FILE  = r"events.db"
 LOGO     = f"{M}\\TLgreen.png"
@@ -30,21 +30,38 @@ def init_db():
     con.commit(); con.close()
 
 def log(event):
-    con = sqlite3.connect(DB_FILE)
-    con.execute("INSERT INTO events(time,event) VALUES(?,?)", (time.strftime("%Y-%m-%d %H:%M:%S"), event))
-    con.commit(); con.close()
+    try:
+        con = sqlite3.connect(DB_FILE)
+        con.execute("INSERT INTO events(time,event) VALUES(?,?)", (time.strftime("%Y-%m-%d %H:%M:%S"), event))
+        con.commit(); con.close()
+    except Exception: pass  # не упадёт если БД ещё не создана
 
 class Arduino:
     def __init__(self, port):
-        self._s = None
+        self._s = None; self._cb = None
         if HAS_SERIAL and port:
-            try: self._s = serial.Serial(port, 9600, timeout=1); time.sleep(2)
+            try:
+                self._s = serial.Serial(port, 9600, timeout=1); time.sleep(2)
+                threading.Thread(target=self._read, daemon=True).start()
             except Exception as e: print(f"Arduino: {e}")
 
     def send_tl(self, path):
-        if cmd := TL_CMD.get(path):
-            try: self._s and self._s.write(cmd) and self._s.flush()
+        bn = os.path.basename(path) if isinstance(path, str) else path
+        cmd = next((v for k,v in TL_CMD.items() if os.path.basename(k)==bn), None)
+        if not cmd: cmd = path if isinstance(path, bytes) else None
+        if cmd and self._s:
+            try: self._s.write(cmd); self._s.flush()
             except Exception as e: print(f"Serial: {e}")
+
+    def set_cb(self, cb): self._cb = cb
+
+    def _read(self):
+        while True:
+            try:
+                if self._s and self._s.in_waiting:
+                    line = self._s.readline().decode().strip()
+                    if self._cb and line: self._cb(line)
+            except: pass
 
 ARD = None
 
@@ -115,6 +132,10 @@ class Side(QWidget):
         self.pvb.setContentsMargins(0,0,0,0); self.pvb.setSpacing(4)
         for w in (self.sp, self.props): w.hide(); hb.addWidget(w)
         hb.addStretch()
+        self._timer = QTimer(interval=3000, timeout=self._auto_tick)
+        self._auto_obj = self._auto_grid = self._last_obj = self._last_grid = None
+        self._pending = None
+        self._poll = QTimer(interval=100, timeout=self._process_pending); self._poll.start()
 
     def _sec(self, paths, names):
         w = QWidget(); hb = QHBoxLayout(w); hb.setContentsMargins(0,0,0,0); hb.setSpacing(4)
@@ -134,10 +155,24 @@ class Side(QWidget):
         if self.grid: self.grid.sel = None; self.grid.mode = 'place' if place else None
         self.props.hide(); self.sp.setVisible(place)
 
+    def do_diag(self, obj, grid):
+        names = ["TLred.png", "TLyellow.png", "TLgreen.png"]
+        cur = os.path.basename(obj["path"])
+        idx = names.index(cur) if cur in names else 0
+        obj["path"] = os.path.join(os.path.dirname(obj["path"]), names[(idx+1)%3])
+        if ARD: ARD.send_tl(obj["path"])
+        log(f"Диагностика: {os.path.basename(obj['path'])}"); grid.update()
+
+    def do_restore(self, obj, grid):
+        obj["path"] = os.path.join(os.path.dirname(obj["path"]), "TLyellow.png")
+        if ARD: ARD.send_tl(obj["path"])
+        log("Восстановление: жёлтый"); grid.update()
+
     def show_props(self, cell, obj, grid):
         while self.pvb.count():
             w = self.pvb.takeAt(0).widget()
             if w: w.deleteLater()
+        self._last_obj = obj; self._last_grid = grid
         self.props.show(); base = obj["base"]
         self.pvb.addWidget(QLabel(f"<b>{OBJECTS.get(base, os.path.basename(base))}</b>"))
 
@@ -154,34 +189,38 @@ class Side(QWidget):
             b.clicked.connect(color); self.pvb.addWidget(b)
 
         if base == IMG5:
-            b = QPushButton("Ручной режим")
-            def on_manual(_, o=obj, g=grid):
-                idx = TL_CYCLE.index(o["path"]) if o["path"] in TL_CYCLE else 0
-                o["path"] = TL_CYCLE[(idx+1)%3]
-                if ARD: ARD.send_tl(o["path"])
-                log(f"Ручной: {os.path.basename(o['path'])}"); g.update()
-            b.clicked.connect(on_manual); self.pvb.addWidget(b)
-
             ba = QPushButton("Авторежим"); ba.setCheckable(True)
-            self._timer = QTimer(interval=3000)
-            self._auto_obj = obj; self._auto_grid = grid
-            self._timer.timeout.connect(self._auto_tick)
-            def on_auto(checked):
-                if checked: self._auto_obj=obj; self._auto_grid=grid; self._timer.start(); log("Авторежим вкл")
+            def on_auto(checked, o=obj, g=grid):
+                if checked: self._auto_obj=o; self._auto_grid=g; self._timer.start(); log("Авторежим вкл")
                 else: self._timer.stop(); log("Авторежим выкл")
             ba.clicked.connect(on_auto); self.pvb.addWidget(ba)
 
+            bd = QPushButton("Диагностика")
+            bd.clicked.connect(lambda _, o=obj, g=grid: self.do_diag(o, g))
+            self.pvb.addWidget(bd)
+
+            br = QPushButton("Восстановление")
+            br.clicked.connect(lambda _, o=obj, g=grid: self.do_restore(o, g))
+            self.pvb.addWidget(br)
+
         b = QPushButton("Удалить"); b.setStyleSheet("color:red;")
-        def dele(_, c=cell, g=grid): g.objs.pop(c, None); g.update(); self.props.hide()
+        def dele(_, c=cell, g=grid): g.objs.pop(c, None); g.roads.pop(c, None); g.update(); self.props.hide()
         b.clicked.connect(dele); self.pvb.addWidget(b)
 
     def _auto_tick(self):
-        if not self._auto_obj: return
-        o = self._auto_obj
-        o["path"] = TL_CYCLE[(TL_CYCLE.index(o["path"])+1)%3] if o["path"] in TL_CYCLE else TL_CYCLE[0]
-        if self._auto_grid: self._auto_grid.update()
-        if ARD: ARD.send_tl(o["path"])
-        log(f"Авто: {os.path.basename(o['path'])}")
+        if self._auto_obj: self.do_diag(self._auto_obj, self._auto_grid)
+
+    def on_ard_btn(self, msg):
+        o, g = self._last_obj, self._last_grid
+        if not o or not g: return
+        if msg == "B1": self._pending = ("diag", o, g)
+        elif msg == "B2": self._pending = ("restore", o, g)
+
+    def _process_pending(self):
+        if self._pending:
+            cmd, o, g = self._pending; self._pending = None
+            if cmd == "diag": self.do_diag(o, g)
+            else: self.do_restore(o, g)
 
 class App(QMainWindow):
     def __init__(self):
@@ -197,22 +236,45 @@ class App(QMainWindow):
 
         bar = QHBoxLayout(); bar.setContentsMargins(6,6,6,6); bar.setSpacing(6)
         self.bp = QPushButton("Добавить объекты"); self.bp.setCheckable(True)
+        bml = QPushButton("Начать обучение")
+        bjr = QPushButton("Журнал событий")
         bs = QPushButton("Сохранить"); bl = QPushButton("Загрузить")
         self.bp.toggled.connect(lambda v: self.side.switch(place=v))
+        bml.clicked.connect(self._show_ml)
+        bjr.clicked.connect(self._show_log)
         bs.clicked.connect(lambda: (fn:=QFileDialog.getSaveFileName(self,"","","JSON (*.json)")[0]) and self.grid.save(fn))
         bl.clicked.connect(lambda: (fn:=QFileDialog.getOpenFileName(self,"","","JSON (*.json)")[0]) and self.grid.load(fn))
-        for b in (self.bp, bs, bl):
+        for b in (self.bp, bml, bjr, bs, bl):
             b.setFixedHeight(32); b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed); bar.addWidget(b)
 
         bottom = QVBoxLayout(); bottom.setContentsMargins(0,0,0,0); bottom.setSpacing(0)
         bottom.addWidget(self.side); bottom.addLayout(bar)
         root.addLayout(bottom); self.adjustSize()
 
+    def _show_ml(self):
+        dlg = QDialog(self); dlg.setWindowTitle("Машинное обучение")
+        vb = QVBoxLayout(dlg); vb.addWidget(QLabel("Здесь вы можете реализовать алгоритм обучения"))
+        dlg.exec()
+
+    def _show_log(self):
+        dlg = QDialog(self); dlg.setWindowTitle("Журнал событий"); dlg.resize(500, 300)
+        vb = QVBoxLayout(dlg)
+        t = QTableWidget(); t.setColumnCount(3); t.setHorizontalHeaderLabels(["ID","Время","Событие"])
+        t.horizontalHeader().setStretchLastSection(True)
+        try:
+            con = sqlite3.connect(DB_FILE); rows = con.execute("SELECT id,time,event FROM events ORDER BY id DESC").fetchall(); con.close()
+            t.setRowCount(len(rows))
+            for r,(i,tm,ev) in enumerate(rows): t.setItem(r,0,QTableWidgetItem(str(i))); t.setItem(r,1,QTableWidgetItem(tm)); t.setItem(r,2,QTableWidgetItem(ev))
+        except: pass
+        vb.addWidget(t); dlg.exec()
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     init_db()
     port, ok = QInputDialog.getText(None, "Arduino", "COM-порт\nПример: COM3")
     ARD = Arduino(port.strip() if ok and port.strip() else None)
-    w = App(); w.show()
+    w = App()
+    if ARD: ARD.set_cb(w.side.on_ard_btn)
+    w.show()
     QTimer.singleShot(0, lambda: (w.grid.load(MAP_FILE), w.grid.update()))
     sys.exit(app.exec())
