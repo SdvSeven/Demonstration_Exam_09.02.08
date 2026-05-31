@@ -5,15 +5,15 @@ from PyQt6.QtCore import Qt, QTimer
 try: import serial; HAS_SERIAL = True
 except: HAS_SERIAL = False
 
-M = r"demo_final\module2\media"       # -> Ваш путь к папке /media
-LOGO = f"{M}\\TLgreen.png" # Иконка -> Светофор
+M = r"demo_final\module2\media"
+LOGO = f"{M}\\TLgreen.png"
 IMG1, IMG2, IMG3, IMG4, IMG5 = f"{M}\\Cbottom.png", f"{M}\\Pedestrain.png", f"{M}\\Block.png", f"{M}\\Zhorizontal.png", f"{M}\\TLyellow.png"
 RD1, RD2 = f"{M}\\Rvertical.png", f"{M}\\Rcrossroads.png"
-PLACE_IMGS = [IMG1, IMG2, IMG3, IMG4, IMG5, RD1, RD2] # Изображения для "Добавить объекты"
+PLACE_IMGS = [IMG1, IMG2, IMG3, IMG4, IMG5, RD1, RD2]
 PLACE_NAMES = ["Машина", "Пешеход", "Знак", "Зебра", "Светофор", "Дорога", "Перекрёсток"]
-FREE   = {IMG2, IMG3}                       # Объекты которые можно ставить без дороги
-ROT    = {IMG1, IMG2, IMG4, IMG5, RD1, RD2} # Объекты, которые можно поворачивать
-CYCLES = {                                  # Циклы изменения типов объекта (цвет, тип)
+FREE   = {IMG2, IMG3}
+ROT    = {IMG1, IMG2, IMG4, IMG5, RD1, RD2}
+CYCLES = {
     IMG1: [IMG1, f"{M}\\BCvertical.png", f"{M}\\GCicon.ico"],
     IMG3: [IMG3, f"{M}\\Stop.png",       f"{M}\\Start.png"],
     IMG5: [IMG5, f"{M}\\TLred.png",      f"{M}\\TLgreen.png"],
@@ -112,6 +112,7 @@ class Side(QWidget):
         self._auto_grid = None
         self._timer = QTimer(interval=3000)
         self._timer.timeout.connect(self._auto_tick)
+
         hb = QHBoxLayout(self); hb.setContentsMargins(6,2,6,2); hb.setSpacing(4)
         self.sp = self._sec(PLACE_IMGS, PLACE_NAMES)
         self.props = QWidget(); self.pvb = QHBoxLayout(self.props)
@@ -154,7 +155,7 @@ class Side(QWidget):
                 o["path"] = cy[(i+1)%len(cy)]; grid.update()
             b.clicked.connect(color); self.pvb.addWidget(b)
         b = QPushButton("Удалить"); b.setStyleSheet("color:red;")
-        def dele(_, c=cell, g=grid): g.objs.pop(c, None); g.roads.pop(c, None); g.update(); self.props.hide()
+        def dele(_, c=cell, g=grid): g.objs.pop(c, None); g.update(); self.props.hide()
         b.clicked.connect(dele); self.pvb.addWidget(b)
         if base == IMG5:
             b = QPushButton("Ручной режим")
@@ -169,6 +170,15 @@ class Side(QWidget):
                 if checked: self._auto_obj=o; self._auto_grid=g; self._timer.start(); log("Авторежим вкл")
                 else: self._timer.stop(); log("Авторежим выкл")
             ba.clicked.connect(on_auto); self.pvb.addWidget(ba)
+
+            bd = QPushButton("Диагностика")
+            bd.clicked.connect(lambda _, o=obj, g=grid: on_manual(None, o, g))  # ← ИСПРАВЛЕНО
+            self.pvb.addWidget(bd)
+
+            br = QPushButton("Восстановление")
+            br.clicked.connect(lambda _, o=obj, g=grid: (o.update(path=TL_YELLOW), ARD and ARD.send_tl(TL_YELLOW), g.update()))
+            self.pvb.addWidget(br)
+
     def _auto_tick(self):
         if not self._auto_obj: return
         o = self._auto_obj
@@ -193,10 +203,12 @@ class App(QMainWindow):
         bar = QHBoxLayout(); bar.setContentsMargins(6,6,6,6); bar.setSpacing(6)
         self.bp = QPushButton("Добавить объекты"); self.bp.setCheckable(True)
         bs = QPushButton("Сохранить"); bl = QPushButton("Загрузить")
+        bml = QPushButton("Начать обучение")
+        bml.clicked.connect(lambda: QMessageBox.information(self, "Обучение", "Здесь можно добавить алгоритм машинного обучения"))
         self.bp.toggled.connect(lambda v: self.side.switch(place=v))
         bs.clicked.connect(lambda: (fn:=QFileDialog.getSaveFileName(self,"","","JSON (*.json)")[0]) and self.grid.save(fn))
         bl.clicked.connect(lambda: (fn:=QFileDialog.getOpenFileName(self,"","","JSON (*.json)")[0]) and self.grid.load(fn))
-        for b in (self.bp, bs, bl):
+        for b in (self.bp, bs, bl, bml):
             b.setFixedHeight(32); b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed); bar.addWidget(b)
 
         bottom = QVBoxLayout(); bottom.setContentsMargins(0,0,0,0); bottom.setSpacing(0)
