@@ -172,7 +172,7 @@ class Side(QWidget):
             ba.clicked.connect(on_auto); self.pvb.addWidget(ba)
 
             bd = QPushButton("Диагностика")
-            bd.clicked.connect(lambda _, o=obj, g=grid: on_manual(None, o, g))  # ← ИСПРАВЛЕНО
+            bd.clicked.connect(lambda _, o=obj, g=grid: on_manual(None, o, g))
             self.pvb.addWidget(bd)
 
             br = QPushButton("Восстановление")
