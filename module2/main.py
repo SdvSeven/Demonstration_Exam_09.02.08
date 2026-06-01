@@ -52,6 +52,10 @@ class Arduino:
             try: self._s and self._s.write(cmd) and self._s.flush()
             except Exception as e: print(f"Serial: {e}")
 
+    def read(self):  # ← ДОБАВЛЕНО
+        try: return self._s.readline().decode().strip() if self._s and self._s.in_waiting else None
+        except: return None
+
 ARD = None
 
 def get_px(path, rot=0):
@@ -110,8 +114,12 @@ class Side(QWidget):
         self.grid = None; self.ibtns = []
         self._auto_obj  = None
         self._auto_grid = None
+        self._tl_obj = None; self._tl_grid = None  # ← ДОБАВЛЕНО
         self._timer = QTimer(interval=3000)
         self._timer.timeout.connect(self._auto_tick)
+        self._serial_timer = QTimer(interval=100)   # ← ДОБАВЛЕНО
+        self._serial_timer.timeout.connect(self._read_serial)  # ← ДОБАВЛЕНО
+        self._serial_timer.start()                  # ← ДОБАВЛЕНО
 
         hb = QHBoxLayout(self); hb.setContentsMargins(6,2,6,2); hb.setSpacing(4)
         self.sp = self._sec(PLACE_IMGS, PLACE_NAMES)
@@ -171,6 +179,8 @@ class Side(QWidget):
                 else: self._timer.stop(); log("Авторежим выкл")
             ba.clicked.connect(on_auto); self.pvb.addWidget(ba)
 
+            self._tl_obj = obj; self._tl_grid = grid  # ← ДОБАВЛЕНО
+
             bd = QPushButton("Диагностика")
             bd.clicked.connect(lambda _, o=obj, g=grid: on_manual(None, o, g))
             self.pvb.addWidget(bd)
@@ -178,6 +188,19 @@ class Side(QWidget):
             br = QPushButton("Восстановление")
             br.clicked.connect(lambda _, o=obj, g=grid: (o.update(path=TL_YELLOW), ARD and ARD.send_tl(TL_YELLOW), g.update()))
             self.pvb.addWidget(br)
+
+    def _read_serial(self):  # ← ДОБАВЛЕНО
+        if not ARD or not self._tl_obj: return
+        msg = ARD.read()
+        if msg == "B1":
+            o, g = self._tl_obj, self._tl_grid
+            idx = TL_CYCLE.index(o["path"]) if o["path"] in TL_CYCLE else 0
+            o["path"] = TL_CYCLE[(idx+1)%3]
+            ARD.send_tl(o["path"]); log(f'Кнопка1: {os.path.basename(o["path"])}'); g.update()
+        elif msg == "B2":
+            o, g = self._tl_obj, self._tl_grid
+            o["path"] = TL_YELLOW
+            ARD.send_tl(TL_YELLOW); log("Кнопка2: жёлтый"); g.update()
 
     def _auto_tick(self):
         if not self._auto_obj: return
